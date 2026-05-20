@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celengan Digital - Glowing Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Efek custom untuk membuat desain menyala (Neon Glow) */
+        .glow-green {
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+        }
+        .glow-card {
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1), 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+        .glow-btn-masuk {
+            box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+        }
+        .glow-btn-keluar {
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+        }
+        /* Animasi berkedip halus untuk logo */
+        @keyframes pulse-glow {
+            0%, 100% { text-shadow: 0 0 8px rgba(34, 197, 94, 0.6); }
+            50% { text-shadow: 0 0 18px rgba(34, 197, 94, 0.9); }
+        }
+        .logo-glowing {
+            animation: pulse-glow 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 font-sans min-h-screen pb-10 text-gray-100">
+
+    <div class="max-w-md mx-auto px-4 pt-6">
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-extrabold text-green-400 logo-glowing tracking-wide">💰 CELENGAN DIGITAL</h1>
+            <p class="text-xs text-gray-400 mt-1">Catat dan pantau riwayat tabunganmu tanpa lupa</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-green-500 via-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-lg mb-6 glow-green relative overflow-hidden">
+            <div class="absolute -right-6 -top-6 w-24 h-24 bg-white opacity-10 rounded-full blur-xl"></div>
+            <p class="text-xs opacity-80 uppercase tracking-widest font-bold">Total Saldomu Saat Ini</p>
+            <h2 id="total-saldo" class="text-3xl font-black mt-1 tracking-wide drop-shadow-md">Rp 0</h2>
+        </div>
+
+        <div class="bg-gray-900 rounded-2xl p-5 border border-gray-800 glow-card mb-6">
+            <h3 class="font-bold text-green-400 mb-4 text-xs uppercase tracking-wider flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-green-500 animate-ping"></span> Tambah Catatan Baru
+            </h3>
+            <form id="finance-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1.5">Jenis Transaksi</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="btn-masuk" class="py-2.5 text-center rounded-xl font-bold border-2 border-green-500 bg-green-950/50 text-green-400 transition glow-btn-masuk" onclick="setTipe('masuk')">
+                            📥 Menabung
+                        </button>
+                        <button type="button" id="btn-keluar" class="py-2.5 text-center rounded-xl font-bold border border-gray-700 bg-gray-800 text-gray-400 transition" onclick="setTipe('keluar')">
+                            📤 Tarik Uang
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1.5">Nominal Uang (Rp)</label>
+                    <input type="number" id="nominal" placeholder="Contoh: 50000" class="w-full bg-gray-800 text-white px-4 py-2.5 rounded-xl border border-gray-700 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition" required>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1.5">Keterangan / Catatan</label>
+                    <input type="text" id="catatan" placeholder="Contoh: Sisa uang jajan" class="w-full bg-gray-800 text-white px-4 py-2.5 rounded-xl border border-gray-700 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition" required>
+                </div>
+
+                <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-gray-950 font-black py-3 rounded-xl shadow-md transition transform active:scale-95 duration-100 uppercase tracking-wider text-sm glow-green">
+                    Simpan & Amankan
+                </button>
+            </form>
+        </div>
+
+        <div class="bg-gray-900 rounded-2xl p-5 border border-gray-800 glow-card">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-gray-300 text-xs uppercase tracking-wider">Riwayat Tabungan</h3>
+                <div class="flex gap-4">
+                    <button onclick="hapusRiwayat()" class="text-[11px] font-semibold text-yellow-500 hover:text-yellow-400 transition hover:underline">Bersihkan Riwayat</button>
+                    <button onclick="resetSemua()" class="text-[11px] font-semibold text-red-500 hover:text-red-400 transition hover:underline">Reset Saldo</button>
+                </div>
+            </div>
+            
+            <div id="history-list" class="space-y-3 max-h-64 overflow-y-auto pr-1">
+                <p class="text-center text-gray-500 text-sm py-6">Belum ada riwayat aktivitas.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tipeTransaksi = 'masuk';
+        // PERBAIKAN: Saldo dan Riwayat sekarang disimpan terpisah
+        let dataTransaksi = JSON.parse(localStorage.getItem('tabungan_data')) || [];
+        let saldoSaatIni = parseInt(localStorage.getItem('tabungan_saldo')) || 0;
+
+        function setTipe(tipe) {
+            tipeTransaksi = tipe;
+            const btnMasuk = document.getElementById('btn-masuk');
+            const btnKeluar = document.getElementById('btn-keluar');
+
+            if (tipe === 'masuk') {
+                btnMasuk.className = "py-2.5 text-center rounded-xl font-bold border-2 border-green-500 bg-green-950/50 text-green-400 transition glow-btn-masuk";
+                btnKeluar.className = "py-2.5 text-center rounded-xl font-bold border border-gray-700 bg-gray-800 text-gray-400 transition";
+            } else {
+                btnKeluar.className = "py-2.5 text-center rounded-xl font-bold border-2 border-red-500 bg-red-950/50 text-red-400 transition glow-btn-keluar";
+                btnMasuk.className = "py-2.5 text-center rounded-xl font-bold border border-gray-700 bg-gray-800 text-gray-400 transition";
+            }
+        }
+
+        function formatRupiah(angka) {
+            return 'Rp ' + parseInt(angka).toLocaleString('id-ID');
+        }
+
+        function perbaruiTampilan() {
+            const historyList = document.getElementById('history-list');
+            const totalSaldoEl = document.getElementById('total-saldo');
+            
+            historyList.innerHTML = '';
+            // Tampilkan saldo dari memori terpisah, bukan dihitung dari riwayat
+            totalSaldoEl.innerText = formatRupiah(saldoSaatIni);
+
+            if (dataTransaksi.length === 0) {
+                historyList.innerHTML = '<p class="text-center text-gray-500 text-sm py-6">Belum ada riwayat aktivitas.</p>';
+                return;
+            }
+
+            // Tampilkan riwayat dengan urutan terbaru di atas
+            const sortedData = [...dataTransaksi].reverse();
+
+            sortedData.forEach(item => {
+                const warnaTeks = item.tipe === 'masuk' ? 'text-green-400' : 'text-red-400';
+                const simbol = item.tipe === 'masuk' ? '+' : '-';
+                const bgIcon = item.tipe === 'masuk' ? 'bg-green-950 text-green-400 border-green-800' : 'bg-red-950 text-red-400 border-red-800';
+                const icon = item.tipe === 'masuk' ? '📥' : '📤';
+
+                historyList.innerHTML += `
+                    <div class="flex items-center justify-between p-3 bg-gray-850 rounded-xl border border-gray-800 hover:border-gray-700 transition">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-lg border ${bgIcon} flex items-center justify-center text-base">${icon}</div>
+                            <div>
+                                <p class="font-bold text-gray-200 text-sm">${item.catatan}</p>
+                                <p class="text-[10px] text-gray-500 mt-0.5">${item.tanggal}</p>
+                            </div>
+                        </div>
+                        <p class="font-black text-sm ${warnaTeks}">${simbol} ${formatRupiah(item.nominal)}</p>
+                    </div>
+                `;
+            });
+        }
+
+        document.getElementById('finance-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const nominalInput = parseInt(document.getElementById('nominal').value);
+            const catatan = document.getElementById('catatan').value;
+            const tanggal = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit' });
+
+            // Update memori Saldo terpisah
+            if (tipeTransaksi === 'masuk') {
+                saldoSaatIni += nominalInput;
+            } else {
+                saldoSaatIni -= nominalInput;
+            }
+            localStorage.setItem('tabungan_saldo', saldoSaatIni);
+
+            // Simpan Riwayat
+            const transaksiBaru = {
+                tipe: tipeTransaksi,
+                nominal: nominalInput,
+                catatan: catatan,
+                tanggal: tanggal
+            };
+            dataTransaksi.push(transaksiBaru);
+            localStorage.setItem('tabungan_data', JSON.stringify(dataTransaksi));
+            
+            document.getElementById('nominal').value = '';
+            document.getElementById('catatan').value = '';
+            perbaruiTampilan();
+        });
+
+        // Fitur Hapus Catatan Saja (Saldo Aman)
+        function hapusRiwayat() {
+            if (confirm('Hanya menghapus riwayat catatan? (Saldo kamu akan tetap aman)')) {
+                dataTransaksi = [];
+                localStorage.removeItem('tabungan_data');
+                perbaruiTampilan();
+            }
+        }
+
+        // Fitur Reset Semuanya dari 0
+        function resetSemua() {
+            if (confirm('PERINGATAN: Yakin ingin menghapus SALDO dan RIWAYAT kembali ke Rp 0?')) {
+                dataTransaksi = [];
+                saldoSaatIni = 0;
+                localStorage.removeItem('tabungan_data');
+                localStorage.removeItem('tabungan_saldo');
+                perbaruiTampilan();
+            }
+        }
+
+        // Jalankan otomatis saat web dibuka
+        perbaruiTampilan();
+    </script>
+</body>
+</html>
